@@ -27,6 +27,8 @@ void audioTaskCode(void * parameter) {
         if (file) { delete file; file = NULL; }
         Serial.println("Sound ended");
       }
+      // Dùng vTaskDelay xả CPU cho Core 0 (WiFi/WebSocket) để không bị ngắt kết nối
+      vTaskDelay(2 / portTICK_PERIOD_MS);
     } else {
       vTaskDelay(10 / portTICK_PERIOD_MS);
     }

@@ -17,6 +17,7 @@ const CMD_LABELS = {
     'V': 'Auto ON',
     'v': 'Auto OFF',
     'I': 'LED Toggle',
+    'Z': 'Reset ESP32',
 };
 
 function getTimeStr() {
@@ -224,7 +225,7 @@ holdButtons.forEach(id => {
 });
 
 // --- Action Buttons (single press) ---
-const actionButtons = ['btn-auto-turn', 'btn-auto-on', 'btn-auto-off', 'btn-led'];
+const actionButtons = ['btn-auto-turn', 'btn-auto-on', 'btn-auto-off', 'btn-led', 'btn-reset'];
 
 actionButtons.forEach(id => {
     const btn = document.getElementById(id);
@@ -279,4 +280,73 @@ document.addEventListener('keyup', (e) => {
 document.getElementById('btn-clear-log')?.addEventListener('click', () => {
     logContainer.innerHTML = '';
     addLog('Log cleared', 'info');
+});
+
+// --- Sound System ---
+const soundSelect = document.getElementById('sound-select');
+
+function loadSounds() {
+    fetch('/api/sounds')
+        .then(res => res.json())
+        .then(data => {
+            if (!soundSelect) return;
+            soundSelect.innerHTML = '';
+            if (data.sounds.length === 0) {
+                const opt = document.createElement('option');
+                opt.textContent = 'No sounds available';
+                opt.value = '';
+                soundSelect.appendChild(opt);
+            } else {
+                data.sounds.forEach(sound => {
+                    const opt = document.createElement('option');
+                    opt.textContent = sound;
+                    opt.value = sound;
+                    soundSelect.appendChild(opt);
+                });
+            }
+        })
+        .catch(err => console.error("Error loading sounds", err));
+}
+
+if (soundSelect) loadSounds();
+
+document.getElementById('btn-play-sound')?.addEventListener('click', () => {
+    const sound = soundSelect?.value;
+    if (sound) {
+        sendCommand(`play?sound=${sound}`);
+    }
+});
+
+document.getElementById('btn-delete-sound')?.addEventListener('click', () => {
+    const sound = soundSelect?.value;
+    if (sound && confirm(`Delete ${sound}?`)) {
+        fetch(`/api/sounds/${sound}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(() => loadSounds())
+            .catch(err => console.error("Error deleting", err));
+    }
+});
+
+const uploadInput = document.getElementById('sound-upload');
+document.getElementById('btn-upload-sound')?.addEventListener('click', () => {
+    uploadInput?.click();
+});
+
+uploadInput?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file && file.name.endsWith('.mp3')) {
+        const formData = new FormData();
+        formData.append('file', file);
+        fetch('/api/sounds/upload', {
+            method: 'POST',
+            body: formData
+        }).then(res => res.json())
+          .then(() => {
+              loadSounds();
+              uploadInput.value = ''; // clear
+          })
+          .catch(err => console.error("Error uploading", err));
+    } else if (file) {
+        alert("Only MP3 files are allowed.");
+    }
 });

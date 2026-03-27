@@ -45,8 +45,8 @@ unsigned long lastConnectTime = 0;
 #include "servo/servo.h"
 
 // ============ Cấu hình WiFi ============
-const char *ssid = "Jendeukie";
-const char *password = "thaongan";
+const char *ssid = "BA4-1017 5G";
+const char *password = "1234567?";
 
 WebSocketsClient webSocket;
 
@@ -60,7 +60,7 @@ void executeCommand(char cmd) {
     lastCmdTime = millis();
   }
   switch (cmd) {
-    case 'F':
+  case 'F':
     if (distance > StopDistance) {
       forward();
     } else {
@@ -129,14 +129,14 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
             "[WS] Data received too soon after connect, ignoring...");
         return;
       }
-      
-      String payloadStr = (char*)payload;
+
+      String payloadStr = (char *)payload;
       if (payloadStr.startsWith("play?sound=")) {
-          String filename = payloadStr.substring(11);
-          filename.trim();
-          currentSoundUrl = "http://222.253.80.30:5678/sounds/" + filename;
-          shouldPlaySound = true;
-          return;
+        String filename = payloadStr.substring(11);
+        filename.trim();
+        currentSoundUrl = "http://222.253.80.30:1111/sounds/" + filename;
+        shouldPlaySound = true;
+        return;
       }
 
       char cmd = (char)payload[0];
@@ -161,7 +161,7 @@ void setupWiFi() {
 
 // ============ Cài đặt WebSocket ============
 void setupWebSocket() {
-  webSocket.begin("222.253.80.30", 41205, "/ws/car");
+  webSocket.begin("222.253.80.30", 1111, "/ws/car");
   webSocket.onEvent(webSocketEvent);
   webSocket.setReconnectInterval(5000);
 }

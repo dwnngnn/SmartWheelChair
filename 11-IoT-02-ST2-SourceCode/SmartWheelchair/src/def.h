@@ -29,7 +29,7 @@ extern unsigned long lastConnectTime;
 #define IN3 32
 #define IN4 33
 // Led
-#define LED 21
+#define LED 15
 // Buzzer
 #define BUZZER_PIN 23
 // PWM channels

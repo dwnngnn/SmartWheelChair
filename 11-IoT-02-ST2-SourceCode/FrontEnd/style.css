@@ -301,6 +301,40 @@ body {
     text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
 }
 
+.btn-reset:active {
+    background: rgba(255, 70, 70, 0.25);
+    border-color: #ff6b6b;
+    box-shadow: 0 0 15px rgba(255, 70, 70, 0.4);
+}
+.btn-reset span.action-icon {
+    color: #ff6b6b;
+    text-shadow: 0 0 8px rgba(255, 70, 70, 0.4);
+}
+
+.sound-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.sound-select {
+    width: 100%;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e6edf3;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    outline: none;
+}
+.sound-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.btn-upload {
+    width: 100%;
+}
+
 /* ===== Log Panel ===== */
 .log-panel {
     flex: 1;
