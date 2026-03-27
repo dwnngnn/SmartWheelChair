@@ -2,6 +2,11 @@
 #include <ESP32Servo.h>
 #include <WebSocketsClient.h>
 #include <WiFi.h>
+
+#include "AudioFileSourceICYStream.h"
+#include "AudioGeneratorMP3.h"
+#include "AudioOutputI2S.h"
+
 extern Servo myServo;
 extern WebSocketsClient webSocket;
 // WiFi + WebSocket
@@ -63,3 +68,10 @@ extern unsigned long lastSensor;
 
 // If distance Below this, Stop running
 extern int StopDistance;
+
+// Audio
+extern AudioGeneratorMP3 *mp3;
+extern AudioFileSourceICYStream *file;
+extern AudioOutputI2S *out;
+extern String currentSoundUrl;
+extern bool shouldPlaySound;

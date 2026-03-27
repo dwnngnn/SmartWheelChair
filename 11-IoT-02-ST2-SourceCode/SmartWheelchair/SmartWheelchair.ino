@@ -5,6 +5,34 @@
 #include "src/servo/servo.h"
 #include "src/task/task.h"
 #include "src/buzzer/buzzer.h"
+
+void audioTaskCode(void * parameter) {
+  for(;;) {
+    if (shouldPlaySound && currentSoundUrl != "") {
+      shouldPlaySound = false;
+      Serial.println("Starting sound: " + currentSoundUrl);
+      
+      if (mp3 && mp3->isRunning()) mp3->stop();
+      if (file) { delete file; file = NULL; }
+      
+      file = new AudioFileSourceICYStream(currentSoundUrl.c_str());
+      if (mp3) {
+        mp3->begin(file, out);
+      }
+    }
+
+    if (mp3 && mp3->isRunning()) {
+      if (!mp3->loop()) {
+        mp3->stop();
+        if (file) { delete file; file = NULL; }
+        Serial.println("Sound ended");
+      }
+    } else {
+      vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+  }
+}
+
 void setup() {
 
   Serial.begin(115200);
@@ -39,6 +67,15 @@ void setup() {
   // Còi báo (Buzzer)
   pinMode(BUZZER_PIN, OUTPUT);
 
+
+  // ===== Cài đặt I2S Audio =====
+  out = new AudioOutputI2S(0, 1);
+  out->SetPinout(22, 16, 19); // BCLK, LRC, DIN
+  out->SetGain(0.45);
+  out->SetBuffers(32, 512);
+  mp3 = new AudioGeneratorMP3();
+
+  xTaskCreatePinnedToCore(audioTaskCode, "Audio Task", 8192, NULL, 1, NULL, 0);
 
   xTaskCreatePinnedToCore(sensorTask, "Sensor Task", 4096, NULL, 2, NULL, 1);
 }

@@ -2,6 +2,12 @@
 
 Servo myServo;
 
+AudioGeneratorMP3 *mp3 = NULL;
+AudioFileSourceICYStream *file = NULL;
+AudioOutputI2S *out = NULL;
+String currentSoundUrl = "";
+bool shouldPlaySound = false;
+
 SemaphoreHandle_t motorMutex = NULL;
 SemaphoreHandle_t distanceMutex = NULL;
 
@@ -96,6 +102,9 @@ void executeCommand(char cmd) {
   case 'I':
     digitalWrite(LED, !digitalRead(LED));
     break;
+  case 'Z':
+    ESP.restart();
+    break;
   }
 }
 
@@ -120,6 +129,16 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
             "[WS] Data received too soon after connect, ignoring...");
         return;
       }
+      
+      String payloadStr = (char*)payload;
+      if (payloadStr.startsWith("play?sound=")) {
+          String filename = payloadStr.substring(11);
+          filename.trim();
+          currentSoundUrl = "http://222.253.80.30:5678/sounds/" + filename;
+          shouldPlaySound = true;
+          return;
+      }
+
       char cmd = (char)payload[0];
       handleCommand(cmd);
     }

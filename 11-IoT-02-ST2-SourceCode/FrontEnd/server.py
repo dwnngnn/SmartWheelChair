@@ -1,10 +1,11 @@
 import os
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from typing import Dict, Optional
+import shutil
 
 app = FastAPI(title="ESP32 Car Controller Server (FastAPI)")
 
@@ -144,6 +145,36 @@ async def websocket_car_endpoint(websocket: WebSocket):
 
 # Serve static files
 current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Audio handling
+SOUNDS_DIR = os.path.join(current_dir, "sounds")
+os.makedirs(SOUNDS_DIR, exist_ok=True)
+app.mount("/sounds", StaticFiles(directory=SOUNDS_DIR), name="sounds")
+
+@app.get("/api/sounds")
+async def list_sounds():
+    files = []
+    if os.path.exists(SOUNDS_DIR):
+        files = [f for f in os.listdir(SOUNDS_DIR) if f.endswith('.mp3')]
+    return {"sounds": files}
+
+@app.post("/api/sounds/upload")
+async def upload_sound(file: UploadFile = File(...)):
+    if not file.filename.endswith('.mp3'):
+        raise HTTPException(status_code=400, detail="Only MP3 files allowed")
+    
+    file_path = os.path.join(SOUNDS_DIR, file.filename)
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return {"message": "Success", "filename": file.filename}
+
+@app.delete("/api/sounds/{filename}")
+async def delete_sound(filename: str):
+    file_path = os.path.join(SOUNDS_DIR, filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        return {"message": "Deleted"}
+    raise HTTPException(status_code=404, detail="File not found")
 
 # Mount all static files including HTML as fallback
 app.mount("/static", StaticFiles(directory=current_dir, html=True), name="static")
