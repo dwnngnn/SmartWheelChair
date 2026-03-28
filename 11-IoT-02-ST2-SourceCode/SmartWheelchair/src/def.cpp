@@ -45,8 +45,7 @@ unsigned long lastConnectTime = 0;
 #include "servo/servo.h"
 
 // ============ Cấu hình WiFi ============
-const WifiCredential wifiList[] = {{"ngu", "12345678"},
-                                   {"BA4-1017 5G", "1234567?"}};
+const WifiCredential wifiList[] = {{"ngu", "12345678"}};
 const int wifiCount = sizeof(wifiList) / sizeof(WifiCredential);
 
 WebSocketsClient webSocket;
