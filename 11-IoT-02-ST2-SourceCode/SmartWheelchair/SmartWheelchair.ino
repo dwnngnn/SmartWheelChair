@@ -89,6 +89,13 @@ void loop() {
   // Vòng lặp WebSocket - nhận lệnh từ server
   webSocket.loop();
 
+  // Gửi heartbeat mỗi 5 giây
+  static unsigned long lastHeartbeat = 0;
+  if (millis() - lastHeartbeat > 5000) {
+    lastHeartbeat = millis();
+    webSocket.sendTXT("PING");
+  }
+
   // Cập nhật trạng thái thời gian thực qua WebSocket
   // Chỉ gửi tín hiệu qua ngõ Socket nếu có bất kì thông số nào thay đổi (Quay đầu, Đổi khoảng cách >0.5cm, Thay đổi chế độ)
   static int lastSentHead = -1;

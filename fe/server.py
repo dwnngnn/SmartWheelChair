@@ -116,10 +116,12 @@ async def websocket_car_endpoint(websocket: WebSocket):
                 except json.JSONDecodeError:
                     pass
 
-            if data_str in ("PING", "PONG"):
-                await manager.broadcast(data_str, is_status=True)
+            if data_str == "PING":
+                await websocket.send_text("PONG")
                 continue
-
+            
+            if data_str == "PONG":
+                continue
             if data_str == "ESP32 connected":
                 print("🔄 ESP32 Connected: Resetting server state...")
                 manager.command_history.clear()

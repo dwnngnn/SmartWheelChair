@@ -103,7 +103,7 @@ setInterval(() => {
         pingStart = Date.now();
         ws.send('PING\n');
     }
-}, 2000);
+}, 5000);
 
 // --- WebSocket ---
 ws.onopen = () => {

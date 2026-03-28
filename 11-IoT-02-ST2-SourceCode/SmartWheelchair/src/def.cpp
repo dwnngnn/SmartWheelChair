@@ -132,11 +132,17 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
       }
 
       String payloadStr = (char *)payload;
+      if (payloadStr == "P" || payloadStr == "PING" || payloadStr == "PONG") {
+        return;
+      }
+      Serial.printf("[WS] Received: %s\n", payloadStr.c_str());
+
       if (payloadStr.startsWith("play?sound=")) {
         String filename = payloadStr.substring(11);
         filename.trim();
         currentSoundUrl = "http://222.253.80.30:1111/sounds/" + filename;
         shouldPlaySound = true;
+        Serial.printf("[WS] Sound command: %s\n", filename.c_str());
         return;
       }
 
@@ -159,6 +165,7 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
       } else {
         // Fallback for old format if needed, or ignore
         char cmd = (char)payload[0];
+        Serial.printf("[WS] Legacy Cmd: %c\n", cmd);
         handleCommand(cmd);
       }
     }
