@@ -1,12 +1,9 @@
 #include "def.h"
+#include "webpage.h"
 
 Servo myServo;
 
-AudioGeneratorMP3 *mp3 = NULL;
-AudioFileSourceICYStream *file = NULL;
-AudioOutputI2S *out = NULL;
-String currentSoundUrl = "";
-bool shouldPlaySound = false;
+// Audio variables removed (Zero-Internet Mode)
 
 SemaphoreHandle_t motorMutex = NULL;
 SemaphoreHandle_t distanceMutex = NULL;
@@ -38,23 +35,22 @@ unsigned long lastSensor = 0;
 int StopDistance = 30;
 
 volatile char pendingCmd = 0;
-unsigned long lastConnectTime = 0;
 
 #include "behavior/behavior.h"
 #include "motor/motor.h"
 #include "servo/servo.h"
 
 // ============ Cấu hình WiFi ============
-const WifiCredential wifiList[] = {{"ngu", "12345678"}};
+const WifiCredential wifiList[] = {{"BA41017 5G", "1234567?"}};
 const int wifiCount = sizeof(wifiList) / sizeof(WifiCredential);
 
-WebSocketsClient webSocket;
+WebSocketsServer localWebSocket = WebSocketsServer(81);
+WebSocketsClient remoteWebSocket;
+WebServer server(80);
 
 // ============ Xử lý lệnh ============
-// Lưu lệnh mới nhất vào buffer
 void handleCommand(char cmd) { pendingCmd = cmd; }
 
-// Thực thi lệnh (gọi trong vòng lặp)
 void executeCommand(char cmd) {
   if (cmd != 'P') {
     lastCmdTime = millis();
@@ -64,7 +60,7 @@ void executeCommand(char cmd) {
     if (distance > StopDistance) {
       forward();
     } else {
-      stopMotor(); // Nếu khoảng cách quá gần, không cho chạy và tự ép dừng
+      stopMotor();
     }
     break;
   case 'B':
@@ -97,7 +93,7 @@ void executeCommand(char cmd) {
     stopMotor();
     break;
   case 'P':
-    webSocket.sendTXT("PONG");
+    localWebSocket.broadcastTXT("PONG");
     break;
   case 'I':
     digitalWrite(LED, !digitalRead(LED));
@@ -108,65 +104,66 @@ void executeCommand(char cmd) {
   }
 }
 
-// ============ Sự kiện WebSocket ============
-void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
+// Logic xử lý lệnh chung cho cả local và remote
+void processRawCommand(String payloadStr, bool isRemote) {
+  if (payloadStr == "P" || payloadStr == "PING" || payloadStr == "PONG") {
+    return;
+  }
+
+  if (payloadStr.startsWith("{") && payloadStr.endsWith("}")) {
+    return;
+  }
+
+  if (payloadStr.startsWith("play?sound=")) {
+    Serial.println("[WS] Sound command received (Disabled in Local Mode)");
+    return;
+  }
+
+  int sepIdx = payloadStr.indexOf('|');
+  if (sepIdx != -1) {
+    char cmd = payloadStr.charAt(0);
+    handleCommand(cmd);
+  } else {
+    char cmd = payloadStr.charAt(0);
+    handleCommand(cmd);
+  }
+}
+
+// ============ Sự kiện localWebSocket (Server) ============
+void localWebSocketEvent(uint8_t num, WStype_t type, uint8_t *payload,
+                         size_t length) {
   switch (type) {
   case WStype_DISCONNECTED:
-    Serial.println("[WS] Disconnected!");
-    pendingCmd = 0; // Xóa lệnh chờ khi mất kết nối
+    Serial.printf("[Local:%u] Disconnected!\n", num);
+    break;
+  case WStype_CONNECTED: {
+    IPAddress ip = localWebSocket.remoteIP(num);
+    Serial.printf("[Local:%u] Connected from %d.%d.%d.%d\n", num, ip[0], ip[1],
+                  ip[2], ip[3]);
+    localWebSocket.sendTXT(num, "ESP32 connected");
+    break;
+  }
+  case WStype_TEXT:
+    if (length > 0) {
+      processRawCommand((char *)payload, false);
+    }
+    break;
+  }
+}
+
+// ============ Sự kiện remoteWebSocket (Client) ============
+void remoteWebSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
+  switch (type) {
+  case WStype_DISCONNECTED:
+    Serial.println("[Remote] Disconnected!");
     break;
   case WStype_CONNECTED:
-    Serial.printf("[WS] Connected to: %s\n", payload);
-    lastConnectTime = millis();
-    pendingCmd = 0; // Xóa lệnh chờ khi kết nối lại
-    webSocket.sendTXT("ESP32 connected");
+    Serial.printf("[Remote] Connected to server: %s\n", payload);
+    remoteWebSocket.sendTXT("ESP32 connected");
     break;
   case WStype_TEXT:
     if (length > 0) {
-      // Bỏ qua các lệnh nhận được trong 500ms đầu tiên (tránh lệnh cũ)
-      if (millis() - lastConnectTime < 500) {
-        Serial.println(
-            "[WS] Data received too soon after connect, ignoring...");
-        return;
-      }
-
-      String payloadStr = (char *)payload;
-      if (payloadStr == "P" || payloadStr == "PING" || payloadStr == "PONG") {
-        return;
-      }
-      Serial.printf("[WS] Received: %s\n", payloadStr.c_str());
-
-      if (payloadStr.startsWith("play?sound=")) {
-        String filename = payloadStr.substring(11);
-        filename.trim();
-        currentSoundUrl = "http://222.253.80.30:1111/sounds/" + filename;
-        shouldPlaySound = true;
-        Serial.printf("[WS] Sound command: %s\n", filename.c_str());
-        return;
-      }
-
-      // Format mới: CMD|TIMESTAMP (vd: F|1711612800000)
-      int sepIdx = payloadStr.indexOf('|');
-      if (sepIdx != -1) {
-        char cmd = payloadStr.charAt(0);
-        long long serverTs = atoll(payloadStr.substring(sepIdx + 1).c_str());
-        long long localTs = getCurrentTimeMs();
-        long long latency = localTs - serverTs;
-
-        Serial.printf("[WS] Cmd: %c, Latency: %lld ms\n", cmd, latency);
-
-        if (abs(latency) > 2000) {
-          Serial.printf("[WS] Latency too high! Resetting socket...\n");
-          webSocket.disconnect();
-          return;
-        }
-        handleCommand(cmd);
-      } else {
-        // Fallback for old format if needed, or ignore
-        char cmd = (char)payload[0];
-        Serial.printf("[WS] Legacy Cmd: %c\n", cmd);
-        handleCommand(cmd);
-      }
+      processRawCommand((char *)payload, true);
     }
     break;
   }
@@ -174,60 +171,56 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
 
 // ============ Cài đặt WiFi ============
 void setupWiFi() {
-  Serial.println("\nScanning for WiFi...");
-  int n = WiFi.scanNetworks();
-  Serial.printf("%d networks found\n", n);
+  Serial.println("\nSetting up Local AP...");
 
-  for (int i = 0; i < wifiCount; i++) {
-    for (int j = 0; j < n; j++) {
-      if (WiFi.SSID(j) == wifiList[i].ssid) {
-        Serial.printf("Connecting to priority %d: %s\n", i + 1,
-                      wifiList[i].ssid);
-        WiFi.begin(wifiList[i].ssid, wifiList[i].password);
-        while (WiFi.status() != WL_CONNECTED) {
-          delay(500);
-          Serial.print(".");
-        }
-        Serial.println("\nWiFi connected!");
-        Serial.print("IP: ");
-        Serial.println(WiFi.localIP());
-        return;
-      }
-    }
-  }
+  WiFi.disconnect(true); 
+  delay(100);
+  WiFi.mode(WIFI_AP);
 
-  Serial.println("No priority networks found. Retrying in 5s...");
-  delay(5000);
-  ESP.restart();
+  // Cấu hình IP tĩnh cho AP
+  IPAddress local_IP(192, 168, 4, 1);
+  IPAddress gateway(192, 168, 4, 1);
+  IPAddress subnet(255, 255, 255, 0);
+  WiFi.softAPConfig(local_IP, gateway, subnet);
+
+  WiFi.softAP("SmartWheelChair", "12345678");
+  Serial.println("Access Point Started: SmartWheelChair");
+  Serial.print("AP IP Address: ");
+  Serial.println(WiFi.softAPIP());
+  Serial.println("-------------------------");
 }
 
 // ============ Cài đặt Thời gian ============
 void setupTime() {
-  configTime(7 * 3600, 0, "pool.ntp.org", "time.nist.gov");
-  Serial.print("Syncing time (NTP)...");
-  struct tm timeinfo;
-  int retry = 0;
-  while (!getLocalTime(&timeinfo) && retry < 10) {
-    Serial.print(".");
-    delay(500);
-    retry++;
-  }
-  if (retry < 10) {
-    Serial.println("\nTime synced!");
-  } else {
-    Serial.println("\nTime sync failed! Check network.");
-  }
+  // NTP time sync disabled in local AP mode
 }
 
 long long getCurrentTimeMs() {
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  return (long long)tv.tv_sec * 1000 + (tv.tv_usec / 1000);
+  return millis();
+}
+
+// ============ Cài đặt Web Server ============
+void setupWebServer() {
+  server.on("/", []() { server.send(200, "text/html", index_html); });
+  server.on("/style.css", []() { server.send(200, "text/css", style_css); });
+  server.on("/script.js",
+            []() { server.send(200, "application/javascript", script_js); });
+  server.on("/api/status", []() {
+    char statusMsg[64];
+    snprintf(statusMsg, sizeof(statusMsg),
+             "{\"dist\":%.2f, \"auto\":%s, \"head\":%d}", distance,
+             autoMode ? "true" : "false", headDegree);
+    server.send(200, "application/json", statusMsg);
+  });
+  server.begin();
+  Serial.println("HTTP Web Server Started on Port 80");
 }
 
 // ============ Cài đặt WebSocket ============
 void setupWebSocket() {
-  webSocket.begin("222.253.80.30", 1111, "/ws/car");
-  webSocket.onEvent(webSocketEvent);
-  webSocket.setReconnectInterval(5000);
+  // Local Server
+  localWebSocket.begin();
+  localWebSocket.onEvent(localWebSocketEvent);
+
+  Serial.println("WebSocket Local Server Started on Port 81");
 }

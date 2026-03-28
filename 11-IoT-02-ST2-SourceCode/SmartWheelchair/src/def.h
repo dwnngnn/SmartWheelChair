@@ -1,15 +1,18 @@
 #pragma once
 #include <Arduino.h>
 #include <ESP32Servo.h>
+#include <WebSocketsServer.h>
 #include <WebSocketsClient.h>
+#include <WebServer.h>
 #include <WiFi.h>
 
-#include "AudioFileSourceICYStream.h"
-#include "AudioGeneratorMP3.h"
-#include "AudioOutputI2S.h"
+// Audio headers removed (Zero-Internet Mode)
 
 extern Servo myServo;
-extern WebSocketsClient webSocket;
+extern WebSocketsServer localWebSocket;
+extern WebSocketsClient remoteWebSocket;
+extern WebServer server;
+
 struct WifiCredential {
   const char *ssid;
   const char *password;
@@ -20,9 +23,10 @@ extern const int wifiCount;
 
 #include <time.h>
 
-// WiFi + WebSocket + Time
+// AP + WebServer + WebSocket Server + Client
 void setupWiFi();
 void setupTime();
+void setupWebServer();
 void setupWebSocket();
 long long getCurrentTimeMs();
 void handleCommand(char cmd);
@@ -82,9 +86,4 @@ extern unsigned long lastSensor;
 // If distance Below this, Stop running
 extern int StopDistance;
 
-// Audio
-extern AudioGeneratorMP3 *mp3;
-extern AudioFileSourceICYStream *file;
-extern AudioOutputI2S *out;
-extern String currentSoundUrl;
-extern bool shouldPlaySound;
+// Audio externs removed (Zero-Internet Mode)
