@@ -178,7 +178,7 @@ function startCommand(cmd) {
 
     activeCommand = cmd;
     sendCommand(cmd);
-    commandInterval = setInterval(() => sendCommand(cmd), 100);
+    commandInterval = setInterval(() => sendCommand(cmd), 200);
 }
 
 function stopCommand(shouldSendStop = true) {

@@ -98,14 +98,10 @@ void loop() {
 
   // Cập nhật trạng thái thời gian thực qua WebSocket
   // Chỉ gửi tín hiệu qua ngõ Socket nếu có bất kì thông số nào thay đổi (Quay đầu, Đổi khoảng cách >0.5cm, Thay đổi chế độ)
-  static int lastSentHead = -1;
-  static float lastSentDist = -1.0;
-  static bool lastSentAuto = !autoMode;
+  static unsigned long lastStatusSent = 0;
 
-  if (lastSentHead != headDegree || abs(lastSentDist - distance) > 0.5 || lastSentAuto != autoMode) {
-    lastSentHead = headDegree;
-    lastSentDist = distance;
-    lastSentAuto = autoMode;
+  if (millis() - lastStatusSent > 1000) {
+    lastStatusSent = millis();
     
     char statusMsg[64];
     snprintf(statusMsg, sizeof(statusMsg), "{\"dist\":%.2f, \"auto\":%s, \"head\":%d}", 

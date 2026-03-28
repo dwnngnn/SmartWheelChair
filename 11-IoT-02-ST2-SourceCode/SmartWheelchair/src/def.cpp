@@ -31,7 +31,7 @@ long duration = 0;
 
 unsigned long lastCmdTime = 0;
 
-int timeout = 100;
+int timeout = 500;
 
 unsigned long lastSensor = 0;
 
