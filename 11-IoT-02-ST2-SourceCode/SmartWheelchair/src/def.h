@@ -87,3 +87,4 @@ extern unsigned long lastSensor;
 extern int StopDistance;
 
 // Audio externs removed (Zero-Internet Mode)
+void logToBrowser(String msg);

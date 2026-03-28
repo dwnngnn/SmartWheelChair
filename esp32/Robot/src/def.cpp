@@ -35,7 +35,7 @@ int timeout = 100;
 
 unsigned long lastSensor = 0;
 
-int StopDistance = 30;
+int StopDistance = 20;
 
 volatile char pendingCmd = 0;
 unsigned long lastConnectTime = 0;

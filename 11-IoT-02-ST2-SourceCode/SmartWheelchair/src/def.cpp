@@ -16,7 +16,7 @@ int degreePerTurn = 10;
 int headDegree = 90;
 int headTurnDir = 0;
 
-int speedBase = 100;
+int speedBase = 255;
 int speedL = speedBase * 0.7;
 int speedR = speedBase * 0.7;
 
@@ -129,17 +129,20 @@ void processRawCommand(String payloadStr, bool isRemote) {
   }
 }
 
-// ============ Sự kiện localWebSocket (Server) ============
+void logToBrowser(String msg) {
+  Serial.println(msg);
+  localWebSocket.broadcastTXT(msg);
+}
+
+// ============ Sự kiện WebSocket Local ============
 void localWebSocketEvent(uint8_t num, WStype_t type, uint8_t *payload,
                          size_t length) {
   switch (type) {
   case WStype_DISCONNECTED:
-    Serial.printf("[Local:%u] Disconnected!\n", num);
+    logToBrowser("[WS] Client #" + String(num) + " disconnected");
     break;
   case WStype_CONNECTED: {
-    IPAddress ip = localWebSocket.remoteIP(num);
-    Serial.printf("[Local:%u] Connected from %d.%d.%d.%d\n", num, ip[0], ip[1],
-                  ip[2], ip[3]);
+    logToBrowser("[WS] Client #" + String(num) + " connected");
     localWebSocket.sendTXT(num, "ESP32 connected");
     break;
   }
@@ -171,9 +174,9 @@ void remoteWebSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
 
 // ============ Cài đặt WiFi ============
 void setupWiFi() {
-  Serial.println("\nSetting up Local AP...");
+  logToBrowser("\nSetting up Local AP...");
 
-  WiFi.disconnect(true); 
+  WiFi.disconnect(true);
   delay(100);
   WiFi.mode(WIFI_AP);
 
@@ -184,10 +187,9 @@ void setupWiFi() {
   WiFi.softAPConfig(local_IP, gateway, subnet);
 
   WiFi.softAP("SmartWheelChair", "12345678");
-  Serial.println("Access Point Started: SmartWheelChair");
-  Serial.print("AP IP Address: ");
-  Serial.println(WiFi.softAPIP());
-  Serial.println("-------------------------");
+  logToBrowser("Access Point Started: SmartWheelChair");
+  logToBrowser("AP IP Address: 192.168.4.1");
+  logToBrowser("-------------------------");
 }
 
 // ============ Cài đặt Thời gian ============
@@ -195,9 +197,7 @@ void setupTime() {
   // NTP time sync disabled in local AP mode
 }
 
-long long getCurrentTimeMs() {
-  return millis();
-}
+long long getCurrentTimeMs() { return millis(); }
 
 // ============ Cài đặt Web Server ============
 void setupWebServer() {
@@ -222,5 +222,5 @@ void setupWebSocket() {
   localWebSocket.begin();
   localWebSocket.onEvent(localWebSocketEvent);
 
-  Serial.println("WebSocket Local Server Started on Port 81");
+  logToBrowser("WebSocket Local Server Started on Port 81");
 }
