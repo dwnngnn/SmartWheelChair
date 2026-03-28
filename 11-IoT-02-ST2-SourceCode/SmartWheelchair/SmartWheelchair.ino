@@ -39,8 +39,9 @@ void setup() {
 
   Serial.begin(115200);
 
-  // Kết nối WiFi + WebSocket
+  // Kết nối WiFi + WebSocket + Time
   setupWiFi();
+  setupTime();
   setupWebSocket();
 
   pinMode(TRIG, OUTPUT);

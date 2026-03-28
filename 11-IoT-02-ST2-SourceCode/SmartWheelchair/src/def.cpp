@@ -45,8 +45,9 @@ unsigned long lastConnectTime = 0;
 #include "servo/servo.h"
 
 // ============ Cấu hình WiFi ============
-const char *ssid = "BA4-1017 5G";
-const char *password = "1234567?";
+const WifiCredential wifiList[] = {{"ngu", "12345678"},
+                                   {"BA4-1017 5G", "1234567?"}};
+const int wifiCount = sizeof(wifiList) / sizeof(WifiCredential);
 
 WebSocketsClient webSocket;
 
@@ -139,8 +140,27 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
         return;
       }
 
-      char cmd = (char)payload[0];
-      handleCommand(cmd);
+      // Format mới: CMD|TIMESTAMP (vd: F|1711612800000)
+      int sepIdx = payloadStr.indexOf('|');
+      if (sepIdx != -1) {
+        char cmd = payloadStr.charAt(0);
+        long long serverTs = atoll(payloadStr.substring(sepIdx + 1).c_str());
+        long long localTs = getCurrentTimeMs();
+        long long latency = localTs - serverTs;
+
+        Serial.printf("[WS] Cmd: %c, Latency: %lld ms\n", cmd, latency);
+
+        if (abs(latency) > 2000) {
+          Serial.printf("[WS] Latency too high! Resetting socket...\n");
+          webSocket.disconnect();
+          return;
+        }
+        handleCommand(cmd);
+      } else {
+        // Fallback for old format if needed, or ignore
+        char cmd = (char)payload[0];
+        handleCommand(cmd);
+      }
     }
     break;
   }
@@ -148,15 +168,55 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
 
 // ============ Cài đặt WiFi ============
 void setupWiFi() {
-  Serial.print("Connecting to WiFi...");
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  Serial.println("\nScanning for WiFi...");
+  int n = WiFi.scanNetworks();
+  Serial.printf("%d networks found\n", n);
+
+  for (int i = 0; i < wifiCount; i++) {
+    for (int j = 0; j < n; j++) {
+      if (WiFi.SSID(j) == wifiList[i].ssid) {
+        Serial.printf("Connecting to priority %d: %s\n", i + 1,
+                      wifiList[i].ssid);
+        WiFi.begin(wifiList[i].ssid, wifiList[i].password);
+        while (WiFi.status() != WL_CONNECTED) {
+          delay(500);
+          Serial.print(".");
+        }
+        Serial.println("\nWiFi connected!");
+        Serial.print("IP: ");
+        Serial.println(WiFi.localIP());
+        return;
+      }
+    }
   }
-  Serial.println("\nWiFi connected!");
-  Serial.print("IP: ");
-  Serial.println(WiFi.localIP());
+
+  Serial.println("No priority networks found. Retrying in 5s...");
+  delay(5000);
+  ESP.restart();
+}
+
+// ============ Cài đặt Thời gian ============
+void setupTime() {
+  configTime(7 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+  Serial.print("Syncing time (NTP)...");
+  struct tm timeinfo;
+  int retry = 0;
+  while (!getLocalTime(&timeinfo) && retry < 10) {
+    Serial.print(".");
+    delay(500);
+    retry++;
+  }
+  if (retry < 10) {
+    Serial.println("\nTime synced!");
+  } else {
+    Serial.println("\nTime sync failed! Check network.");
+  }
+}
+
+long long getCurrentTimeMs() {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return (long long)tv.tv_sec * 1000 + (tv.tv_usec / 1000);
 }
 
 // ============ Cài đặt WebSocket ============

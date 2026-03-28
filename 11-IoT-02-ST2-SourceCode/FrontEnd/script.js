@@ -162,7 +162,8 @@ ws.onmessage = (event) => {
 
 function sendCommand(cmd) {
     if (ws.readyState === WebSocket.OPEN) {
-        ws.send(cmd + '\n');
+        const timestamp = Date.now();
+        ws.send(`${cmd}|${timestamp}\n`);
         addLog(cmd);
     }
 }

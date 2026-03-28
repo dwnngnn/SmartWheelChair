@@ -1,4 +1,5 @@
 #pragma once
+#include <Arduino.h>
 #include <ESP32Servo.h>
 #include <WebSocketsClient.h>
 #include <WiFi.h>
@@ -9,9 +10,21 @@
 
 extern Servo myServo;
 extern WebSocketsClient webSocket;
-// WiFi + WebSocket
+struct WifiCredential {
+  const char *ssid;
+  const char *password;
+};
+
+extern const WifiCredential wifiList[];
+extern const int wifiCount;
+
+#include <time.h>
+
+// WiFi + WebSocket + Time
 void setupWiFi();
+void setupTime();
 void setupWebSocket();
+long long getCurrentTimeMs();
 void handleCommand(char cmd);
 void executeCommand(char cmd);
 extern volatile char pendingCmd;
