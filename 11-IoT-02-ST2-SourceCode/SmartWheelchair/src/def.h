@@ -56,6 +56,7 @@ extern unsigned long lastConnectTime;
 extern int scanAngle;
 extern int scanDir;
 extern bool autoMode;
+extern bool buzzerEnabled;
 extern int degreePerTurn;
 // Current head degree
 extern int headDegree;

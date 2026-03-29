@@ -85,6 +85,10 @@ const char index_html[] PROGMEM = R"rawliteral(
                         <span class="action-icon">💡</span>
                         <span class="action-label">LED Control</span>
                     </button>
+                    <button id="btn-mute" class="action-btn" data-cmd="M">
+                        <span class="action-icon" id="mute-icon">🔔</span>
+                        <span class="action-label" id="mute-label">Buzzer ON</span>
+                    </button>
                     <button id="btn-reset" class="action-btn btn-reset" data-cmd="Z">
                         <span class="action-icon">🔄</span>
                         <span class="action-label">Reset</span>
@@ -778,6 +782,21 @@ function updateStatusUI(status) {
             modeEl.style.color = '#c9d1d9';
         }
     }
+
+    // Update Buzzer status
+    const muteIcon = document.getElementById('mute-icon');
+    const muteLabel = document.getElementById('mute-label');
+    if (status.buzzer !== undefined) {
+        if (status.buzzer) {
+            muteIcon.textContent = '🔔';
+            muteLabel.textContent = 'Buzzer ON';
+            muteIcon.style.color = '#00ff88';
+        } else {
+            muteIcon.textContent = '🔕';
+            muteLabel.textContent = 'Buzzer OFF';
+            muteIcon.style.color = '#ff6b6b';
+        }
+    }
 }
 
 // --- Fetch Initial Status ---
@@ -923,7 +942,7 @@ holdButtons.forEach(id => {
 });
 
 // --- Action Buttons (single press) ---
-const actionButtons = ['btn-auto-turn', 'btn-auto-on', 'btn-auto-off', 'btn-led', 'btn-reset'];
+const actionButtons = ['btn-auto-turn', 'btn-auto-on', 'btn-auto-off', 'btn-led', 'btn-mute', 'btn-reset'];
 
 actionButtons.forEach(id => {
     const btn = document.getElementById(id);
@@ -948,6 +967,8 @@ const KEY_MAP = {
     '1': '1',
     'i': 'I',
     'I': 'I',
+    'm': 'M',
+    'M': 'M',
 };
 
 const keysDown = new Set();

@@ -16,7 +16,7 @@ int currentNote = 0;
 bool isPlaying = false;
 
 void handleBuzzer() {
-  if (distance < 15.0) {  
+  if (buzzerEnabled && distance < 15.0) {  
     if (!isPlaying) {
       isPlaying = true;
       currentNote = 0;

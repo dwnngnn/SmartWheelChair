@@ -11,12 +11,13 @@ SemaphoreHandle_t distanceMutex = NULL;
 int scanAngle = 90;
 int scanDir = 1;
 bool autoMode = false;
+bool buzzerEnabled = true;
 int degreePerTurn = 10;
 
 int headDegree = 90;
 int headTurnDir = 0;
 
-int speedBase = 255;
+int speedBase = 150;
 int speedL = speedBase * 0.7;
 int speedR = speedBase * 0.7;
 
@@ -32,7 +33,7 @@ int timeout = 500;
 
 unsigned long lastSensor = 0;
 
-int StopDistance = 30;
+int StopDistance = 20;
 
 volatile char pendingCmd = 0;
 
@@ -97,6 +98,10 @@ void executeCommand(char cmd) {
     break;
   case 'I':
     digitalWrite(LED, !digitalRead(LED));
+    break;
+  case 'M': // Toggle Buzzer
+    buzzerEnabled = !buzzerEnabled;
+    logToBrowser(buzzerEnabled ? "[Buzzer] ON" : "[Buzzer] OFF");
     break;
   case 'Z':
     ESP.restart();

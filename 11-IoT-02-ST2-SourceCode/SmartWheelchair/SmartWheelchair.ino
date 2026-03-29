@@ -67,9 +67,9 @@ void loop() {
   if (millis() - lastStatusSent > 1000) {
     lastStatusSent = millis();
     
-    char statusMsg[64];
-    snprintf(statusMsg, sizeof(statusMsg), "{\"dist\":%.2f, \"auto\":%s, \"head\":%d}", 
-             distance, autoMode ? "true" : "false", headDegree);
+    char statusMsg[128];
+    snprintf(statusMsg, sizeof(statusMsg), "{\"dist\":%.2f, \"auto\":%s, \"head\":%d, \"buzzer\":%s}", 
+             distance, autoMode ? "true" : "false", headDegree, buzzerEnabled ? "true" : "false");
              
     localWebSocket.broadcastTXT(statusMsg);
   }
